@@ -1,13 +1,15 @@
+import http from 'http';
 import Koa from 'koa';
 import WebSocket from 'ws';
-import http from 'http';
 import Router from 'koa-router';
 import bodyParser from "koa-bodyparser";
-import { timingLogger, exceptionHandler, jwtConfig, initWss, verifyClient } from './utils';
-import { router as noteRouter } from './note';
-import { router as authRouter } from './auth';
 import jwt from 'koa-jwt';
 import cors from '@koa/cors';
+import { jwtConfig, timingLogger, exceptionHandler } from './utils.js';
+import { initWss } from './wss.js';
+import { articleRouter } from './article.js';
+import { authRouter } from './auth.js';
+import { gateRouter } from './gate.js'; // Import your gate router
 
 const app = new Koa();
 const server = http.createServer(app.callback());
@@ -24,20 +26,28 @@ const prefix = '/api';
 // public
 const publicApiRouter = new Router({ prefix });
 publicApiRouter
-  .use('/auth', authRouter.routes());
+    .use('/auth', authRouter.routes());
 app
-  .use(publicApiRouter.routes())
-  .use(publicApiRouter.allowedMethods());
+    .use(publicApiRouter.routes())
+    .use(publicApiRouter.allowedMethods());
+
+// Add your gateRouter to the public or protected routes depending on requirements
+publicApiRouter
+    .use('/gate', gateRouter.routes()); // Register gateRouter here for public access
+
+app
+    .use(publicApiRouter.routes())
+    .use(publicApiRouter.allowedMethods());
 
 app.use(jwt(jwtConfig));
 
 // protected
 const protectedApiRouter = new Router({ prefix });
 protectedApiRouter
-  .use('/item', noteRouter.routes());
+    .use('/article', articleRouter.routes());
 app
-  .use(protectedApiRouter.routes())
-  .use(protectedApiRouter.allowedMethods());
+    .use(protectedApiRouter.routes())
+    .use(protectedApiRouter.allowedMethods());
 
 server.listen(3000);
 console.log('started on port 3000');

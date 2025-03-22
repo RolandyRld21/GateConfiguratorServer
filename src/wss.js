@@ -1,6 +1,6 @@
 import WebSocket from "ws";
 import jwt from "jsonwebtoken";
-import { jwtConfig } from "./constants";
+import { jwtConfig } from "./utils.js";
 
 let wss;
 
@@ -26,7 +26,7 @@ export const broadcast = (userId, data) => {
   if (!wss) {
     return;
   }
-  wss.clients.forEach(client => {
+  wss.clients.forEach(client => { // ws
     if (client.readyState === WebSocket.OPEN && userId === client.user._id) {
       console.log(`broadcast sent to ${client.user.username}`);
       client.send(JSON.stringify(data));
