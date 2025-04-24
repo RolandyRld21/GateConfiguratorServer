@@ -1,167 +1,86 @@
 import Router from 'koa-router';
-import dataStore from 'nedb-promise';
+import { createClient } from '@supabase/supabase-js';
 import { broadcast } from './wss.js';
 
-export class ArticleStore {
-  constructor({ filename, autoload }) {
-    this.store = dataStore({ filename, autoload });
-  }
+const supabaseUrl = 'https://qpvdjklmliwunjimrtpg.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFwdmRqa2xtbGl3dW5qaW1ydHBnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDIwMzg2MTEsImV4cCI6MjA1NzYxNDYxMX0.FZRpiDZtUVFtjLnNrTqALRWR4ZN1IAj_22VngzaQllw'; // Replace with your Supabase anon key
+const supabase = createClient(supabaseUrl, supabaseKey);
 
-  // Search based on props
-  async find(props) {
-    return this.store.find(props);
-  }
-
-  // Return a single article
-  async findOne(props) {
-    return this.store.findOne(props);
-  }
-
-  // Add a new article
-  async insert(article) {
-    if (!article.text) { // Validation
-      throw new Error('Missing text property');
-    }
-    if (article.price === undefined || typeof article.price !== 'number' || article.price < 0) {
-      throw new Error('Missing or invalid price property');
-    }
-    return this.store.insert(article);
-  }
-
-  // Modify an article
-  async update(props, article) {
-    return this.store.update(props, { $set: article }, { multi: false, upsert: false });
-  }
-
-  // Delete an article
-  async remove(props) {
-    return this.store.remove(props);
-  }
-}
-
-const articleStore = new ArticleStore({ filename: './db/articles_extended.json', autoload: true });
 export const articleRouter = new Router();
 
-// Find articles by user
+// Get all articles by user
 articleRouter.get('/', async (ctx) => {
-  console.log("find:");
   const userId = ctx.state.user._id;
-  ctx.response.body = await articleStore.find({ userId });
-  ctx.response.status = 200; // OK
-});
+  const { data, error } = await supabase
+      .from('gates')
+      .select('*')
+      .eq('userId', userId);
 
-// Find all articles (admin access)
-articleRouter.get('/all', async (ctx) => {
-  console.log("find all articles:");
-  ctx.response.body = await articleStore.find({});
-  ctx.response.status = 200; // OK
-});
-
-// Find one article by ID
-articleRouter.get('/:id', async (ctx) => {
-  console.log("findOne:");
-  const userId = ctx.state.user._id;
-  const article = await articleStore.findOne({ _id: ctx.params.id });
-
-  if (article) {
-    if (article.userId === userId) {
-      ctx.response.body = article;
-      ctx.response.status = 200; // OK
-    } else {
-      ctx.response.status = 403; // Forbidden
-    }
-  } else {
-    ctx.response.status = 404; // Not Found
-  }
-});
-
-// Create article helper function
-const createArticle = async (ctx, article, response) => {
-  try {
-    console.log("insert:");
-    const userId = ctx.state.user._id;
-    article.userId = userId;
-    article.date = new Date();
-    article.version = 1;
-    article.isUseful = true;
-
-    if (article.price === undefined || typeof article.price !== 'number' || article.price < 0) {
-      response.body = { message: 'Missing or invalid price property' };
-      response.status = 400; // Bad request
-      return;
-    }
-
-    console.log(article);
-    response.body = await articleStore.insert(article);
-    console.log(response.body);
-    response.status = 201; // Created
-    broadcast(userId, { type: 'created', payload: response.body });
-  } catch (err) {
-    response.body = { message: err.message };
-    response.status = 400; // Bad request
-  }
-};
-
-// Insert a new article
-articleRouter.post('/', async ctx => {
-  console.log("Received POST request:", ctx.request.body); // LOG REQUEST BODY
-  await createArticle(ctx, ctx.request.body, ctx.response);
-});
-
-// Update an existing article
-articleRouter.put('/:id', async ctx => {
-  console.log("update:");
-  const article = ctx.request.body;
-  const id = ctx.params.id;
-  console.log("param's ':id':", id);
-  const articleId = article._id;
-  console.log("article's '_id':", articleId);
-  const response = ctx.response;
-
-  if (articleId && articleId !== id) {
-    response.body = { message: 'Param id and body _id should be the same' };
-    response.status = 400; // Bad request
+  if (error) {
+    ctx.response.status = 500;
+    ctx.response.body = { message: error.message };
     return;
   }
-
-  if (!articleId) {
-    console.log("in update - await createArticle");
-    await createArticle(ctx, article, response);
-  } else {
-    const userId = ctx.state.user._id;
-    article.version++;
-
-    if (article.price === undefined || typeof article.price !== 'number' || article.price < 0) {
-      response.body = { message: 'Missing or invalid price property' };
-      response.status = 400; // Bad request
-      return;
-    }
-
-    console.log("article:", article);
-
-    const updatedCount = await articleStore.update({ _id: id }, article);
-
-    if (updatedCount === 1) {
-      response.body = article;
-      response.status = 200; // OK
-      broadcast(userId, { type: 'updated', payload: article });
-    } else {
-      response.body = { message: 'Resource no longer exists' };
-      response.status = 405; // Method not allowed
-    }
-  }
+  ctx.response.body = data;
 });
 
-// Remove an article
-articleRouter.del('/:id', async (ctx) => {
-  console.log("remove:");
-  const userId = ctx.state.user._id;
-  const article = await articleStore.findOne({ _id: ctx.params.id });
-
-  if (article && userId !== article.userId) {
-    ctx.response.status = 403; // Forbidden
-  } else {
-    await articleStore.remove({ _id: ctx.params.id });
-    ctx.response.status = 204; // No content
+// Get all articles (admin)
+articleRouter.get('/all', async (ctx) => {
+  const { data, error } = await supabase.from('gates').select('*');
+  if (error) {
+    ctx.response.status = 500;
+    ctx.response.body = { message: error.message };
+    return;
   }
+  ctx.response.body = data;
+});
+
+// Get one article by ID
+articleRouter.get('/:id', async (ctx) => {
+  const { data, error } = await supabase.from('gates').select('*').eq('id', ctx.params.id).single();
+  if (error || !data) {
+    ctx.response.status = 404;
+    ctx.response.body = { message: 'Not found' };
+    return;
+  }
+  ctx.response.body = data;
+});
+
+// Insert new article
+articleRouter.post('/', async (ctx) => {
+  const userId = ctx.state.user._id;
+  const article = { ...ctx.request.body, userId, date: new Date(), version: 1, isUseful: true };
+  const { data, error } = await supabase.from('gates').insert([article]).select().single();
+  if (error) {
+    ctx.response.status = 400;
+    ctx.response.body = { message: error.message };
+    return;
+  }
+  ctx.response.body = data;
+  broadcast(userId, { type: 'created', payload: data });
+});
+
+// Update article
+articleRouter.put('/:id', async (ctx) => {
+  const id = ctx.params.id;
+  const article = { ...ctx.request.body, version: ctx.request.body.version + 1 };
+  const { data, error } = await supabase.from('gates').update(article).eq('_id', id).select().single();
+  if (error || !data) {
+    ctx.response.status = 404;
+    ctx.response.body = { message: 'Not found' };
+    return;
+  }
+  ctx.response.body = data;
+  broadcast(article.userId, { type: 'updated', payload: data });
+});
+
+// Delete article
+articleRouter.del('/:id', async (ctx) => {
+  const { error } = await supabase.from('gates').delete().eq('_id', ctx.params.id);
+  if (error) {
+    ctx.response.status = 500;
+    ctx.response.body = { message: error.message };
+    return;
+  }
+  ctx.response.status = 204;
 });

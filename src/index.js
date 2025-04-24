@@ -19,7 +19,12 @@ initWss(wss);
 app.use(cors());
 app.use(timingLogger);
 app.use(exceptionHandler);
-app.use(bodyParser());
+// Modify koa-bodyparser to increase the limit
+app.use(bodyParser({
+    jsonLimit: '10mb',   // Allow JSON payloads up to 10MB
+    textLimit: '10mb',   // Allow text payloads up to 10MB
+    formLimit: '10mb',   // Allow form-data (multipart) up to 10MB
+}));
 
 const prefix = '/api';
 
