@@ -64,6 +64,7 @@ articleRouter.post('/', async (ctx) => {
 articleRouter.put('/:id', async (ctx) => {
   const id = ctx.params.id;
   const article = { ...ctx.request.body, version: ctx.request.body.version + 1 };
+  console.log(ctx.request.body);
   const { data, error } = await supabase.from('gates').update(article).eq('_id', id).select().single();
   if (error || !data) {
     ctx.response.status = 404;
@@ -82,5 +83,6 @@ articleRouter.del('/:id', async (ctx) => {
     ctx.response.body = { message: error.message };
     return;
   }
+  console.log("Im in the delete");
   ctx.response.status = 204;
 });

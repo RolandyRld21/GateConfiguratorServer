@@ -61,63 +61,67 @@ authRouter.post('/login', async (ctx) => {
 
 authRouter.post('/signup', async (ctx) => {
   const { username, password, email } = ctx.request.body;
-  console.log('Signup attempt:', { username, password, email }); // Log the incoming data
+  console.log('Signup attempt:', { username, password, email });
+
   const options = {
-    timeCost: 2,    // Number of iterations
-    memoryCost: 512 * 512, // 1MB of memory per thread (adjust as needed)
-    parallelism: 1, // Use 1 thread (you can increase for multi-core support)
+    timeCost: 2,
+    memoryCost: 512 * 512,
+    parallelism: 1,
   };
-  const hashedPassword = await argon2.hash(password,options);
+
+  const hashedPassword = await argon2.hash(password, options);
+
   try {
-    // Check if the username already exists
-    const { data: existingUser, error: findError } = await supabase
+    // Only check if the email already exists
+    const { data: existingEmailUser, error: emailCheckError } = await supabase
         .from('users')
         .select('*')
-        .eq('username', username)
+        .eq('email', email)
         .single();
 
-    // If there is a Supabase error in the select query, handle it
-    if (findError && findError.code !== 'PGRST116') {
-      console.error('Error checking user:', findError); // Log the error if it's not "no row found"
-      ctx.response.body = { message: 'Error checking user' };
-      ctx.response.status = 500; // Internal Server Error
+    if (emailCheckError && emailCheckError.code !== 'PGRST116') {
+      console.error('Error checking email:', emailCheckError);
+      ctx.response.body = { message: 'Error checking email' };
+      ctx.response.status = 500;
       return;
     }
 
-    // If no user exists (this is not an error), we can safely proceed
-    if (existingUser) {
-      ctx.response.body = { message: 'Username already exists' };
-      ctx.response.status = 400; // Bad Request
+    if (existingEmailUser) {
+      ctx.response.body = { message: 'Email already exists' };
+      ctx.response.status = 400;
       return;
     }
-    //Encrypt the password before adding it into the SupaBase
 
-    // Insert the new user into Supabase
+    // Insert the user (username is not required to be unique)
     const { data, error } = await supabase
         .from('users')
-        .insert([{ username, password:hashedPassword, email}]);
-
-    console.log('Inserted data:', data); // Log inserted data
-    console.log('Insertion error:', error); // Log any errors
+        .insert([{ username, password: hashedPassword, email }]);
 
     if (error) {
-      console.error('Error inserting user:', error); // Log insertion errors
+      console.error('Error inserting user:', error);
       ctx.response.body = { error: error.message };
-      ctx.response.status = 400; // Bad Request
+      ctx.response.status = 400;
     } else {
       ctx.response.body = { message: 'User created successfully', data };
-      ctx.response.status = 201; // Created
+      ctx.response.status = 201;
     }
+
   } catch (err) {
-    console.error('Signup error:', err); // Log any errors
+    console.error('Signup error:', err);
     ctx.response.body = { error: err.message };
-    ctx.response.status = 500; // Internal Server Error
+    ctx.response.status = 500;
   }
 });
 
 
+
 authRouter.post('/forgotpassword', async (ctx) => {
     const { email } = ctx.request.body;
+    const options = {
+      timeCost: 2,
+      memoryCost: 512 * 512,
+      parallelism: 1,
+    };
 
     //search the email in the database
    const {data: user, error} = await supabase
@@ -133,12 +137,14 @@ authRouter.post('/forgotpassword', async (ctx) => {
    }
    //Temporary password
     const tempPassword = crypto.randomBytes(4).toString('hex');
-   //Update the password in the user table
-    const {error: updateError} = await supabase
-        .from('users')
-        .update({password: tempPassword}, )
-        .eq('email', email);
-  console.log('Inserted data:', email, ' ads' , ' ' );
+  const hashedPassword = await argon2.hash(tempPassword, options);
+
+  //Update the password in the user table
+  const { error: updateError } = await supabase
+      .from('users')
+      .update({ password: hashedPassword })
+      .eq('email', email);
+
 
   if (updateError) {
       ctx.response.body = {error: "Failed to Update Password!" };
@@ -164,6 +170,13 @@ authRouter.post('/forgotpassword', async (ctx) => {
 authRouter.post('/change-password', async (ctx) => {
   const { newPassword,  email } = ctx.request.body;
   console.log('Signup attempt:', {  newPassword, email }); // Log the incoming data
+  const options = {
+    timeCost: 2,
+    memoryCost: 512 * 512,
+    parallelism: 1,
+  };
+
+  const hashedPassword = await argon2.hash(newPassword, options);
 
   // Check if the email is valid
   if (!email) {
@@ -189,7 +202,7 @@ authRouter.post('/change-password', async (ctx) => {
   // Proceed to update the password if all is correct
   const { error: updateError } = await supabase
       .from('users')
-      .update({ password: newPassword })
+      .update({ password: hashedPassword })
       .eq('email', email);
 
   if (updateError) {
