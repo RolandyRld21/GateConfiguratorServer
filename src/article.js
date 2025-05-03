@@ -37,14 +37,26 @@ articleRouter.get('/all', async (ctx) => {
 
 // Get one article by ID
 articleRouter.get('/:id', async (ctx) => {
-  const { data, error } = await supabase.from('gates').select('*').eq('id', ctx.params.id).single();
+  console.log('🛬 GET /api/article/:id', ctx.params.id); // ✅ log the incoming ID
+
+  const { data, error } = await supabase
+      .from('gates')
+      .select('*')
+      .eq('_id', ctx.params.id)
+      .single();
+
   if (error || !data) {
+    console.warn('❌ Not found or error:', error);
     ctx.response.status = 404;
     ctx.response.body = { message: 'Not found' };
     return;
   }
+
+  console.log('✅ Found article:', data);
   ctx.response.body = data;
 });
+
+
 
 // Insert new article
 articleRouter.post('/', async (ctx) => {
