@@ -17,7 +17,7 @@ reviewRouter.get('/', async (ctx) => {
         ctx.response.body = { message: 'Order ID is required' };
         return;
     }
-
+    console.log(ctx.response.body);
     const { data, error } = await supabase
         .from('reviews')
         .select('*')
@@ -34,14 +34,32 @@ reviewRouter.get('/', async (ctx) => {
 
 // Create a new review
 reviewRouter.post('/', async (ctx) => {
-    const { user_id, order_id, score, text } = ctx.request.body;
+    const { email, order_id, score, text } = ctx.request.body;
+    console.log(ctx.response.body);
+    console.log(email,order_id,score,text);
 
-    if (!user_id || !order_id || !score || !text) {
+    if (!email || !order_id || !score || !text) {
         ctx.response.status = 400;
         ctx.response.body = { message: 'Missing required fields' };
         return;
     }
 
+    // Fetch the user_id using the email
+    const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('email', email)  // Find the user by email
+        .single();
+
+    if (userError || !userData) {
+        ctx.response.status = 404;
+        ctx.response.body = { message: 'User not found' };
+        return;
+    }
+
+    const user_id = userData.id; // Use the user ID from the query
+
+    // Now insert the review using the user_id
     const { data, error } = await supabase
         .from('reviews')
         .insert([
@@ -50,7 +68,7 @@ reviewRouter.post('/', async (ctx) => {
                 order_id,
                 score,
                 text,
-                time: new Date(),
+                time: new Date().toISOString(), // Timestamp when the review is created
             }
         ])
         .select()
@@ -62,9 +80,10 @@ reviewRouter.post('/', async (ctx) => {
         return;
     }
 
-    ctx.response.body = data;
+    ctx.response.body = data;  // Return the review data
     broadcast(user_id, { type: 'review_created', payload: data });
 });
+
 
 // Update a review (this is optional and based on your needs)
 reviewRouter.put('/:id', async (ctx) => {

@@ -10,7 +10,8 @@ import { initWss } from './wss.js';
 import { articleRouter } from './article.js';
 import { authRouter } from './auth.js';
 
-import { orderRouter } from './order.js'; // Import the order router
+import { orderRouter } from './order.js';
+import {reviewRouter} from "./review.js"; // Import the order router
 
 const app = new Koa();
 const server = http.createServer(app.callback());
@@ -42,7 +43,8 @@ app.use(jwt(jwtConfig));
 const protectedApiRouter = new Router({ prefix });
 protectedApiRouter
     .use('/article', articleRouter.routes())
-    .use('/orders', orderRouter.routes());
+    .use('/orders', orderRouter.routes())
+    .use('/reviews', reviewRouter.routes());
 
 app
     .use(protectedApiRouter.routes())
