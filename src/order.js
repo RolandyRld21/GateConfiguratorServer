@@ -78,12 +78,14 @@ orderRouter.get('/:id', async (ctx) => {
 
 // Place a new order
 orderRouter.post('/', async (ctx) => {
-    const { email } = ctx.state.user;  // Get email from the user context (provided by Auth)
+    const { email } = ctx.state.user;
     const {
         gate_id, width, height, color,
         option1, option2, option3, option4, option5,
-        latitude, longitude
+        latitude, longitude,
+        address_id // ✅ add this
     } = ctx.request.body;
+
 
     // Fetch the user_id using email
     const { data: user, error: userError } = await supabase
@@ -125,7 +127,7 @@ orderRouter.post('/', async (ctx) => {
     const { data: order, error: insertError } = await supabase
         .from('orders')
         .insert([{
-            user_id: user.id,  // Use the user_id from the email query
+            user_id: user.id,
             gate_id,
             width,
             height,
@@ -137,10 +139,12 @@ orderRouter.post('/', async (ctx) => {
             option5,
             total_price,
             latitude,
-            longitude
+            longitude,
+            address_id // ✅ save it here too
         }])
         .select()
         .single();
+
 
     if (insertError) {
         ctx.response.status = 400;

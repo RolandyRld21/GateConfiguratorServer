@@ -9,9 +9,11 @@ import { jwtConfig, timingLogger, exceptionHandler } from './utils.js';
 import { initWss } from './wss.js';
 import { articleRouter } from './article.js';
 import { authRouter } from './auth.js';
+import { paymentRouter } from './payment.js';
 
 import { orderRouter } from './order.js';
 import {reviewRouter} from "./review.js"; // Import the order router
+import { addressRouter } from './address.js';
 
 const app = new Koa();
 const server = http.createServer(app.callback());
@@ -33,6 +35,8 @@ const prefix = '/api';
 const publicApiRouter = new Router({ prefix });
 publicApiRouter
     .use('/auth', authRouter.routes())
+    .use('/payment', paymentRouter.routes());
+
 app
     .use(publicApiRouter.routes())
     .use(publicApiRouter.allowedMethods());
@@ -44,8 +48,8 @@ const protectedApiRouter = new Router({ prefix });
 protectedApiRouter
     .use('/article', articleRouter.routes())
     .use('/orders', orderRouter.routes())
-    .use('/reviews', reviewRouter.routes());
-
+    .use('/reviews', reviewRouter.routes())
+    .use('/addresses', addressRouter.routes())
 app
     .use(protectedApiRouter.routes())
     .use(protectedApiRouter.allowedMethods());

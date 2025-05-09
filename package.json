@@ -21,7 +21,9 @@
     "koa-jwt": "^3.6.0",
     "koa-router": "^8.0.8",
     "nedb-promise": "^2.0.1",
+    "node-fetch": "^3.3.2",
     "nodemailer": "^6.10.0",
+    "stripe": "^18.1.0",
     "ws": "7.4.6"
   },
   "engines": {
