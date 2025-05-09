@@ -14,7 +14,7 @@ import { paymentRouter } from './payment.js';
 import { orderRouter } from './order.js';
 import {reviewRouter} from "./review.js"; // Import the order router
 import { addressRouter } from './address.js';
-
+import routeRouter from './route.js'; // ✅ This matches the default export
 const app = new Koa();
 const server = http.createServer(app.callback());
 const wss = new WebSocket.Server({ server });
@@ -35,7 +35,8 @@ const prefix = '/api';
 const publicApiRouter = new Router({ prefix });
 publicApiRouter
     .use('/auth', authRouter.routes())
-    .use('/payment', paymentRouter.routes());
+    .use('/payment', paymentRouter.routes())
+    .use('/route', routeRouter.routes());
 
 app
     .use(publicApiRouter.routes())
