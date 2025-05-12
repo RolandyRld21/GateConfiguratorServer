@@ -10,6 +10,7 @@ import { initWss } from './wss.js';
 import { articleRouter } from './article.js';
 import { authRouter } from './auth.js';
 import { paymentRouter } from './payment.js';
+import { finalCartRouter } from './finalCart.js';
 
 import { orderRouter } from './order.js';
 import {reviewRouter} from "./review.js"; // Import the order router
@@ -51,6 +52,8 @@ protectedApiRouter
     .use('/orders', orderRouter.routes())
     .use('/reviews', reviewRouter.routes())
     .use('/addresses', addressRouter.routes())
+    .use('/final-cart', finalCartRouter.routes())
+
 app
     .use(protectedApiRouter.routes())
     .use(protectedApiRouter.allowedMethods());

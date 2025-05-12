@@ -6,6 +6,7 @@ import nodemailer from 'nodemailer';
 import crypto from 'crypto';
 import bcrypt from "bcrypt";
 import argon2 from 'argon2';
+import { requireAuth } from './requireAuth.js';
 
 // Initialize Supabase
 const supabaseUrl = 'https://qpvdjklmliwunjimrtpg.supabase.co'; // Replace with your Supabase URL
@@ -30,7 +31,9 @@ authRouter.post('/login', async (ctx) => {
         .from('users')
         .select('*')
         .eq('email', email)
+        .eq('is_deleted', false) // ✅ ignoră conturile șterse
         .single();
+
 
     if (error || !user) {
       ctx.response.body = { error: 'Invalid credentials' };
@@ -231,6 +234,22 @@ authRouter.post('/change-password', async (ctx) => {
     ctx.response.status = 500;
   }
 
+});
+authRouter.delete('/account', requireAuth, async (ctx) => {
+  const email = ctx.state.user.email;
+
+  const { error } = await supabase
+      .from('users')
+      .update({ is_deleted: true })
+      .eq('email', email);
+
+  if (error) {
+    ctx.response.status = 500;
+    ctx.response.body = { message: 'Eroare la ștergere cont' };
+  } else {
+    ctx.response.status = 200;
+    ctx.response.body = { message: 'Contul a fost marcat ca șters' };
+  }
 });
 
 

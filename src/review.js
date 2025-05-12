@@ -109,14 +109,20 @@ reviewRouter.put('/:id', async (ctx) => {
 
 // Delete a review
 reviewRouter.del('/:id', async (ctx) => {
-    const reviewId = ctx.params.id;
-    const { user_id } = ctx.state.user;  // Get the user ID from context (assuming JWT payload contains user info)
+    const reviewId = parseInt(ctx.params.id);
+    if (isNaN(reviewId)) {
+        ctx.response.status = 400;
+        ctx.response.body = { message: 'Invalid review ID' };
+        return;
+    }
+
+    const { user_id } = ctx.state.user;
 
     const { error } = await supabase
         .from('reviews')
         .delete()
-        .eq('id', reviewId)
-        .eq('user_id', user_id);
+        .eq('id', reviewId)       // acum e integer
+
 
     if (error) {
         ctx.response.status = 500;
@@ -126,3 +132,4 @@ reviewRouter.del('/:id', async (ctx) => {
 
     ctx.response.status = 204;
 });
+
