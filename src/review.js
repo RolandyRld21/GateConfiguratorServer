@@ -133,3 +133,46 @@ reviewRouter.del('/:id', async (ctx) => {
     ctx.response.status = 204;
 });
 
+// GET /reviews/gate/:gateId
+reviewRouter.get('/gate/:gateId', async (ctx) => {
+    const gateId = ctx.params.gateId;
+    const sortField = ctx.query.sortField === 'score' ? 'score' : 'time';
+    const sortOrder = ctx.query.sortOrder === 'asc';
+
+    const { data, error } = await supabase
+        .from('reviews')
+        .select('*, orders!inner(gate_id)')
+        .eq('orders.gate_id', gateId)
+        .order(sortField, { ascending: sortOrder }); // ✅ FĂRĂ range
+
+    if (error) {
+        ctx.response.status = 500;
+        ctx.response.body = { message: error.message };
+        return;
+    }
+
+    ctx.response.body = { reviews: data }; // ✅ FĂRĂ total
+});
+
+
+
+reviewRouter.get('/all', async (ctx) => {
+    const offset = parseInt(ctx.query.offset) || 0;
+    const limit = parseInt(ctx.query.limit) || 2;
+    const sortField = ctx.query.sortField === 'score' ? 'score' : 'time'; // default: time
+    const sortOrder = ctx.query.sortOrder === 'asc';
+
+    const { data, error } = await supabase
+        .from('reviews')
+        .select('*')
+        .order(sortField, { ascending: sortOrder })
+        .range(offset, offset + limit - 1);
+
+    if (error) {
+        ctx.response.status = 500;
+        ctx.response.body = { message: error.message };
+        return;
+    }
+
+    ctx.response.body = data;
+});
