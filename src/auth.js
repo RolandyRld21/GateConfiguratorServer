@@ -46,7 +46,11 @@ authRouter.post('/login', async (ctx) => {
     const match = await argon2.verify(user.password, password);
     if (match) {
       const token = jwt.sign({ email: user.email, _id: user.id }, jwtConfig.secret, { expiresIn: '1h' });
-      ctx.response.body = { message: 'Login successful', token };
+      ctx.response.body = {
+        message: 'Login successful',
+        token,
+        role: user.role || 'client'
+      };
       ctx.response.status = 200; // OK
       console.log("am aj");
     } else {
@@ -98,7 +102,8 @@ authRouter.post('/signup', async (ctx) => {
     // Insert the user (username is not required to be unique)
     const { data, error } = await supabase
         .from('users')
-        .insert([{ username, password: hashedPassword, email }]);
+        .insert([{ username, password: hashedPassword, email, role: 'client' }]);
+
 
     if (error) {
       console.error('Error inserting user:', error);
@@ -252,5 +257,62 @@ authRouter.delete('/account', requireAuth, async (ctx) => {
   }
 });
 
+authRouter.delete('/admin/delete-user/:email', requireAuth, async (ctx) => {
+  const requesterEmail = ctx.state.user.email;
 
+  // verifică dacă requesterul este admin
+  const { data: adminUser, error: adminError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('email', requesterEmail)
+      .single();
+
+  if (adminError || !adminUser || adminUser.role !== 'admin') {
+    ctx.status = 403;
+    ctx.body = { message: 'Access denied' };
+    return;
+  }
+
+  const emailToDelete = ctx.params.email;
+
+  const { error } = await supabase
+      .from('users')
+      .update({ is_deleted: true })
+      .eq('email', emailToDelete);
+
+  if (error) {
+    ctx.status = 500;
+    ctx.body = { message: 'Failed to mark user as deleted' };
+  } else {
+    ctx.status = 200;
+    ctx.body = { message: `User ${emailToDelete} marked as deleted` };
+  }
+});
+authRouter.get('/admin/users', requireAuth, async (ctx) => {
+  const requesterEmail = ctx.state.user.email;
+
+  const { data: adminUser, error: adminError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('email', requesterEmail)
+      .single();
+
+  if (adminError || !adminUser || adminUser.role !== 'admin') {
+    ctx.status = 403;
+    ctx.body = { message: 'Access denied' };
+    return;
+  }
+
+  const { data: users, error } = await supabase
+      .from('users')
+      .select('email, username, role, is_deleted');
+
+  if (error) {
+    ctx.status = 500;
+    ctx.body = { message: 'Failed to fetch users' };
+  } else {
+    ctx.status = 200;
+    ctx.body = users;
+  }
+});
 export default authRouter;

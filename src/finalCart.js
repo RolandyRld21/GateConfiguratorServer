@@ -1,5 +1,6 @@
 import Router from 'koa-router';
 import { createClient } from '@supabase/supabase-js';
+import {requireAuth} from "./requireAuth.js";
 
 const supabaseUrl = 'https://qpvdjklmliwunjimrtpg.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFwdmRqa2xtbGl3dW5qaW1ydHBnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDIwMzg2MTEsImV4cCI6MjA1NzYxNDYxMX0.FZRpiDZtUVFtjLnNrTqALRWR4ZN1IAj_22VngzaQllw'; // Replace with your Supabase anon key
@@ -116,4 +117,63 @@ finalCartRouter.get('/', async (ctx) => {
 
     ctx.response.body = carts;
 });
+finalCartRouter.patch('/admin/:id', requireAuth, async (ctx) => {
+    const cartId = ctx.params.id;
+    const { status } = ctx.request.body;
 
+    const { data: user, error: userError } = await supabase
+        .from('users')
+        .select('role')
+        .eq('email', ctx.state.user.email)
+        .single();
+
+    if (userError || user.role !== 'admin') {
+        ctx.status = 403;
+        ctx.body = { message: 'Access denied' };
+        return;
+    }
+
+    const { error } = await supabase
+        .from('final_cart')
+        .update({ status })
+        .eq('id', cartId);
+
+    if (error) {
+        ctx.status = 500;
+        ctx.body = { message: 'Failed to update status' };
+    } else {
+        ctx.status = 200;
+        ctx.body = { message: 'Status updated' };
+    }
+});
+
+// GET /api/final-cart/admin - toate comenzile pentru admin
+finalCartRouter.get('/admin', requireAuth, async (ctx) => {
+    const requesterEmail = ctx.state.user.email;
+    console.log("am ajuns in serverul meu")
+    // verifică dacă e admin
+    const { data: user, error: userError } = await supabase
+        .from('users')
+        .select('role')
+        .eq('email', requesterEmail)
+        .single();
+
+    if (userError || user?.role !== 'admin') {
+        ctx.status = 403;
+        ctx.body = { message: 'Access denied' };
+        return;
+    }
+
+    const { data, error } = await supabase
+        .from('final_cart')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        ctx.status = 500;
+        ctx.body = { message: 'Failed to fetch final carts' };
+    } else {
+        ctx.status = 200;
+        ctx.body = data;
+    }
+});
