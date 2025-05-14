@@ -199,3 +199,26 @@ orderRouter.del('/:id', async (ctx) => {
     ctx.response.status = 204;
 });
 
+// Get all orders from a specific final_cart_id (ADMIN)
+orderRouter.get('/admin/final-cart/:id', async (ctx) => {
+    const finalCartId = parseInt(ctx.params.id);
+    console.log("am ajuns in server cu id pentru final cart = ", finalCartId);
+    if (isNaN(finalCartId)) {
+        ctx.response.status = 400;
+        ctx.response.body = { message: 'Invalid final_cart_id' };
+        return;
+    }
+
+    const { data, error } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('final_cart_id', finalCartId);
+    console.log("datele coemnzilor pentru final cartul respectiv sunt",data);
+    if (error) {
+        ctx.response.status = 500;
+        ctx.response.body = { message: 'Failed to fetch orders', detail: error.message };
+        return;
+    }
+
+    ctx.response.body = data;
+});
