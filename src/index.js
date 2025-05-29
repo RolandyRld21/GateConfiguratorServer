@@ -58,5 +58,5 @@ app
     .use(protectedApiRouter.routes())
     .use(protectedApiRouter.allowedMethods());
 
-server.listen(3000);
+server.listen(3000, '0.0.0.0');
 console.log('started on port 3000');
