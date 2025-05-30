@@ -45,7 +45,7 @@ authRouter.post('/login', async (ctx) => {
     console.log("user password",user.password, "hashedPassword",password);
     const match = await argon2.verify(user.password, password);
     if (match) {
-      const token = jwt.sign({ email: user.email, _id: user.id }, jwtConfig.secret, { expiresIn: '1h' });
+      const token = jwt.sign({ email: user.email, _id: user.id }, jwtConfig.secret, { expiresIn: '24h' });
       ctx.response.body = {
         message: 'Login successful',
         token,

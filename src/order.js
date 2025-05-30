@@ -112,7 +112,7 @@ orderRouter.post('/', async (ctx) => {
         return;
     }
 
-    const base = gate.price * width * height;
+    const base = gate.price * width * height/10000;
     const extras =
         (option1 ? gate.option1 : 0) +
         (option2 ? gate.option2 : 0) +
