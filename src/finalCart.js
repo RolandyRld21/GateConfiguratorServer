@@ -10,11 +10,9 @@ export const finalCartRouter = new Router();
 
 // Finalize current cart into a final_cart group
 finalCartRouter.post('/', async (ctx) => {
-    console.log('[🧪] ctx.state.user:', ctx.state.user); // 🔍 vezi dacă e undefined
 
     const email = ctx.state.user.email;
     const { address_id, delivery_fee } = ctx.request.body;
-    console.log("email:", email);
     // Get user_id
     const { data: user, error: userError } = await supabase
         .from('users')
@@ -150,7 +148,6 @@ finalCartRouter.patch('/admin/:id', requireAuth, async (ctx) => {
 // GET /api/final-cart/admin - toate comenzile pentru admin
 finalCartRouter.get('/admin', requireAuth, async (ctx) => {
     const requesterEmail = ctx.state.user.email;
-    console.log("am ajuns in serverul meu")
     // verifică dacă e admin
     const { data: user, error: userError } = await supabase
         .from('users')

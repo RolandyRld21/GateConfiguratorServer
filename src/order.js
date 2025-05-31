@@ -207,7 +207,6 @@ orderRouter.del('/:id', async (ctx) => {
 // Get all orders from a specific final_cart_id (ADMIN)
 orderRouter.get('/admin/final-cart/:id', async (ctx) => {
     const finalCartId = parseInt(ctx.params.id);
-    console.log("am ajuns in server cu id pentru final cart = ", finalCartId);
     if (isNaN(finalCartId)) {
         ctx.response.status = 400;
         ctx.response.body = { message: 'Invalid final_cart_id' };

@@ -23,7 +23,6 @@ const transporter = nodemailer.createTransport({
 });
 authRouter.post('/login', async (ctx) => {
   const { email, password } = ctx.request.body;
-  console.log('Login attempt:', { email, password }); // Log the incoming data
 
   try {
     // Find the user by email
@@ -42,7 +41,6 @@ authRouter.post('/login', async (ctx) => {
     }
     console.log(user);
     // Check if password matches
-    console.log("user password",user.password, "hashedPassword",password);
     const match = await argon2.verify(user.password, password);
     if (match) {
       const token = jwt.sign({ email: user.email, _id: user.id }, jwtConfig.secret, { expiresIn: '24h' });
@@ -52,7 +50,6 @@ authRouter.post('/login', async (ctx) => {
         role: user.role || 'client'
       };
       ctx.response.status = 200; // OK
-      console.log("am aj");
     } else {
       ctx.response.body = { message: 'Invalid credentials' };
       ctx.response.status = 400; // Bad Request
@@ -68,7 +65,6 @@ authRouter.post('/login', async (ctx) => {
 
 authRouter.post('/signup', async (ctx) => {
   const { username, password, email } = ctx.request.body;
-  console.log('Signup attempt:', { username, password, email });
 
   const options = {
     timeCost: 2,
@@ -177,7 +173,6 @@ authRouter.post('/forgotpassword', async (ctx) => {
 });
 authRouter.post('/change-password', async (ctx) => {
   const { newPassword,  email } = ctx.request.body;
-  console.log('Signup attempt:', {  newPassword, email }); // Log the incoming data
   const options = {
     timeCost: 2,
     memoryCost: 512 * 512,
@@ -228,7 +223,6 @@ authRouter.post('/change-password', async (ctx) => {
       text: `Your password has been successfully changed. If you did not request this change, please contact support immediately.`,
     });
 
-    console.log(`Password change email sent to ${email}`);
 
     // Success message
     ctx.response.body = { message: 'Password changed successfully. A confirmation email has been sent.' };

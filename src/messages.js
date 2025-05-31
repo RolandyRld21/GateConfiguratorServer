@@ -11,7 +11,6 @@ export const messageRouter = new Router();
 // Get all messages for a specific final_cart_id
 messageRouter.get('/:finalCartId', requireAuth, async (ctx) => {
     const finalCartId = ctx.params.finalCartId;
-    console.log("[SERVER] GET /messages/:finalCartId", finalCartId);
 
     const { data, error } = await supabase
         .from('messages')

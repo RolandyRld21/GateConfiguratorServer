@@ -38,11 +38,9 @@ addressRouter.post('/', async (ctx) => {
     }
 
     const fullAddress = `Strada ${street}, ${city}, ${county}, Romania`;
-    console.log('📦 Geocoding full address:', fullAddress);  // 👈 DEBUG OUTPUT
 
     let lat = null, lng = null;
     const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(fullAddress)}`;
-    console.log('🔗 Geocoding URL:', url);  // 👈 FULL REQUEST URL
 
     try {
         const fullAddress = `${street} ${number || ''}, ${city}, ${county}, Romania`;

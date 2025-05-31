@@ -37,7 +37,6 @@ articleRouter.get('/all', async (ctx) => {
 
 // Get one article by ID
 articleRouter.get('/:id', async (ctx) => {
-  console.log('🛬 GET /api/article/:id', ctx.params.id); // ✅ log the incoming ID
 
   const { data, error } = await supabase
       .from('gates')
@@ -52,7 +51,6 @@ articleRouter.get('/:id', async (ctx) => {
     return;
   }
 
-  console.log('✅ Found article:', data);
   ctx.response.body = data;
 });
 
@@ -95,6 +93,5 @@ articleRouter.del('/:id', async (ctx) => {
     ctx.response.body = { message: error.message };
     return;
   }
-  console.log("Im in the delete");
   ctx.response.status = 204;
 });
