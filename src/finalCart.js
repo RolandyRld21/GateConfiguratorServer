@@ -19,7 +19,6 @@ finalCartRouter.post('/', async (ctx) => {
         .select('id')
         .eq('email', email)
         .single();
-    console.log(user);
     if (userError || !user) {
         ctx.response.status = 400;
         ctx.response.body = { message: 'User not found' };

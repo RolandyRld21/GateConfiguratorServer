@@ -17,7 +17,6 @@ reviewRouter.get('/', async (ctx) => {
         ctx.response.body = { message: 'Order ID is required' };
         return;
     }
-    console.log(ctx.response.body);
     const { data, error } = await supabase
         .from('reviews')
         .select('*')
@@ -35,9 +34,6 @@ reviewRouter.get('/', async (ctx) => {
 // Create a new review
 reviewRouter.post('/', async (ctx) => {
     const { email, order_id, score, text } = ctx.request.body;
-    console.log(ctx.response.body);
-    console.log(email,order_id,score,text);
-
     if (!email || !order_id || !score || !text) {
         ctx.response.status = 400;
         ctx.response.body = { message: 'Missing required fields' };

@@ -231,7 +231,6 @@ orderRouter.get('/admin/final-cart/:id', async (ctx) => {
     }
 
     ctx.response.body = data;
-    console.log("Aici o sa incerc sa fac modificarea mea ")
-    console.log(data)
+
 });
 

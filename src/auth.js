@@ -39,7 +39,6 @@ authRouter.post('/login', async (ctx) => {
       ctx.response.status = 400; // Bad Request
       return;
     }
-    console.log(user);
     // Check if password matches
     const match = await argon2.verify(user.password, password);
     if (match) {
