@@ -28,7 +28,12 @@ orderRouter.get('/', async (ctx) => {
 
     let query = supabase
         .from('orders')
-        .select('*')
+        .select(`
+        *,
+        gates (
+            text
+        )
+    `)
         .eq('user_id', userId);
 
     if (finalCartId) {
@@ -47,6 +52,7 @@ orderRouter.get('/', async (ctx) => {
     }
 
     ctx.response.body = data;
+
 });
 
 // Get all orders (admin)
@@ -198,7 +204,6 @@ orderRouter.del('/:id', async (ctx) => {
 
     ctx.response.status = 204;
 });
-
 // Get all orders from a specific final_cart_id (ADMIN)
 orderRouter.get('/admin/final-cart/:id', async (ctx) => {
     const finalCartId = parseInt(ctx.params.id);
@@ -209,11 +214,17 @@ orderRouter.get('/admin/final-cart/:id', async (ctx) => {
         return;
     }
 
+    // Fetch orders with joined gates table to get gate text
     const { data, error } = await supabase
         .from('orders')
-        .select('*')
+        .select(`
+            *,
+            gates (
+                text
+            )
+        `)
         .eq('final_cart_id', finalCartId);
-    console.log("datele coemnzilor pentru final cartul respectiv sunt",data);
+
     if (error) {
         ctx.response.status = 500;
         ctx.response.body = { message: 'Failed to fetch orders', detail: error.message };
@@ -221,4 +232,7 @@ orderRouter.get('/admin/final-cart/:id', async (ctx) => {
     }
 
     ctx.response.body = data;
+    console.log("Aici o sa incerc sa fac modificarea mea ")
+    console.log(data)
 });
+
