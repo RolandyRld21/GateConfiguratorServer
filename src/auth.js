@@ -7,6 +7,7 @@ import crypto from 'crypto';
 import bcrypt from "bcrypt";
 import argon2 from 'argon2';
 import { requireAuth } from './requireAuth.js';
+import { logger } from './logger.js';
 
 // Initialize Supabase
 const supabaseUrl = 'https://qpvdjklmliwunjimrtpg.supabase.co'; // Replace with your Supabase URL
@@ -23,7 +24,7 @@ const transporter = nodemailer.createTransport({
 });
 authRouter.post('/login', async (ctx) => {
   const { email, password } = ctx.request.body;
-
+  logger.info(`[AUTH][LOGIN_ATTEMPT] Email: ${email}`);
   try {
     // Find the user by email
     const { data: user, error } = await supabase
@@ -33,15 +34,17 @@ authRouter.post('/login', async (ctx) => {
         .eq('is_deleted', false) // ✅ ignoră conturile șterse
         .single();
 
-
     if (error || !user) {
+      logger.warn(`[AUTH][LOGIN_FAIL] Email: ${email}`);
       ctx.response.body = { error: 'Invalid credentials' };
       ctx.response.status = 400; // Bad Request
       return;
     }
+
     // Check if password matches
     const match = await argon2.verify(user.password, password);
     if (match) {
+      logger.info(`[AUTH][LOGIN_SUCCESS] Email: ${email}`);
       const token = jwt.sign({ email: user.email, _id: user.id }, jwtConfig.secret, { expiresIn: '24h' });
       ctx.response.body = {
         message: 'Login successful',
@@ -50,12 +53,13 @@ authRouter.post('/login', async (ctx) => {
       };
       ctx.response.status = 200; // OK
     } else {
+      logger.warn(`[AUTH][LOGIN_FAIL] Password mismatch for email: ${email}`);
       ctx.response.body = { message: 'Invalid credentials' };
       ctx.response.status = 400; // Bad Request
     }
 
   } catch (err) {
-    console.error('Login error:', err); // Log any errors
+    logger.error(`[AUTH][LOGIN_ERROR] Email: ${email}, Error: ${err.message}`);
     ctx.response.body = { error: err.message };
     ctx.response.status = 500; // Internal Server Error
   }
@@ -64,7 +68,7 @@ authRouter.post('/login', async (ctx) => {
 
 authRouter.post('/signup', async (ctx) => {
   const { username, password, email } = ctx.request.body;
-
+  logger.info(`[AUTH][SIGNUP_ATTEMPT] Email: ${email}`);
   const options = {
     timeCost: 2,
     memoryCost: 512 * 512,
@@ -89,6 +93,7 @@ authRouter.post('/signup', async (ctx) => {
     }
 
     if (existingEmailUser) {
+      logger.warn(`[AUTH][SIGNUP_FAIL] Email exists: ${email}`);
       ctx.response.body = { message: 'Email already exists' };
       ctx.response.status = 400;
       return;
@@ -101,16 +106,17 @@ authRouter.post('/signup', async (ctx) => {
 
 
     if (error) {
-      console.error('Error inserting user:', error);
+      logger.error(`[AUTH][SIGNUP_ERROR] Email: ${email} - ${error.message}`);
       ctx.response.body = { error: error.message };
       ctx.response.status = 400;
     } else {
+      logger.info(`[AUTH][SIGNUP_SUCCESS] Email: ${email}`);
       ctx.response.body = { message: 'User created successfully', data };
       ctx.response.status = 201;
     }
 
   } catch (err) {
-    console.error('Signup error:', err);
+    logger.error(`[AUTH][SIGNUP_ERROR] Email: ${email}, Error: ${err.message}`);
     ctx.response.body = { error: err.message };
     ctx.response.status = 500;
   }
@@ -120,6 +126,8 @@ authRouter.post('/signup', async (ctx) => {
 
 authRouter.post('/forgotpassword', async (ctx) => {
     const { email } = ctx.request.body;
+    logger.info(`[AUTH][FORGOT_PASSWORD_ATTEMPT] Email: ${email}`);
+
     const options = {
       timeCost: 2,
       memoryCost: 512 * 512,
@@ -134,13 +142,14 @@ authRouter.post('/forgotpassword', async (ctx) => {
        .single();
 
    if (error || !user) {
+     logger.warn(`[AUTH][FORGOT_PASSWORD_FAIL] Email exists: ${email}`);
      ctx.response.body = {error: "Email was not found!" };
      ctx.response.status = 400;
      return;
    }
    //Temporary password
-    const tempPassword = crypto.randomBytes(4).toString('hex');
-  const hashedPassword = await argon2.hash(tempPassword, options);
+   const tempPassword = crypto.randomBytes(4).toString('hex');
+   const hashedPassword = await argon2.hash(tempPassword, options);
 
   //Update the password in the user table
   const { error: updateError } = await supabase
@@ -150,6 +159,7 @@ authRouter.post('/forgotpassword', async (ctx) => {
 
 
   if (updateError) {
+
       ctx.response.body = {error: "Failed to Update Password!" };
       ctx.response.status = 400;
       return;
@@ -208,6 +218,7 @@ authRouter.post('/change-password', async (ctx) => {
       .eq('email', email);
 
   if (updateError) {
+    logger.error(`[AUTH][FORGOT_PASSWORD_ERROR] Email: ${email}, Error: ${updateError.message}`);
     ctx.response.body = { error: 'Failed to update password!' };
     ctx.response.status = 400;
     return;
@@ -227,14 +238,17 @@ authRouter.post('/change-password', async (ctx) => {
     ctx.response.body = { message: 'Password changed successfully. A confirmation email has been sent.' };
     ctx.response.status = 200;
   } catch (mailError) {
-    console.error('Error sending email:', mailError); // Log the actual error
+    logger.error(`[AUTH][FORGOT_PASSWORD_ERROR] Email: ${email}, Error: ${mailError.message}`);
     ctx.response.body = { error: 'Error sending confirmation email.' };
     ctx.response.status = 500;
   }
 
 });
+
+// Ștergere cont utilizator curent
 authRouter.delete('/account', requireAuth, async (ctx) => {
   const email = ctx.state.user.email;
+  logger.info(`[AUTH][DELETE_ACCOUNT_ATTEMPT] Email: ${email}`);
 
   const { error } = await supabase
       .from('users')
@@ -242,16 +256,21 @@ authRouter.delete('/account', requireAuth, async (ctx) => {
       .eq('email', email);
 
   if (error) {
+    logger.error(`[AUTH][DELETE_ACCOUNT_ERROR] Email: ${email}, Error: ${error.message}`);
     ctx.response.status = 500;
     ctx.response.body = { message: 'Eroare la ștergere cont' };
   } else {
+    logger.info(`[AUTH][DELETE_ACCOUNT_SUCCESS] Email: ${email}`);
     ctx.response.status = 200;
     ctx.response.body = { message: 'Contul a fost marcat ca șters' };
   }
 });
 
+// Admin: ștergere utilizator (soft-delete)
 authRouter.delete('/admin/delete-user/:email', requireAuth, async (ctx) => {
   const requesterEmail = ctx.state.user.email;
+  const emailToDelete = ctx.params.email;
+  logger.info(`[AUTH][DELETE_USER_ATTEMPT] Requester: ${requesterEmail} Target: ${emailToDelete}`);
 
   // verifică dacă requesterul este admin
   const { data: adminUser, error: adminError } = await supabase
@@ -261,12 +280,11 @@ authRouter.delete('/admin/delete-user/:email', requireAuth, async (ctx) => {
       .single();
 
   if (adminError || !adminUser || adminUser.role !== 'admin') {
+    logger.warn(`[AUTH][DELETE_USER_DENIED] Requester: ${requesterEmail} (Not admin)`);
     ctx.status = 403;
     ctx.body = { message: 'Access denied' };
     return;
   }
-
-  const emailToDelete = ctx.params.email;
 
   const { error } = await supabase
       .from('users')
@@ -274,15 +292,20 @@ authRouter.delete('/admin/delete-user/:email', requireAuth, async (ctx) => {
       .eq('email', emailToDelete);
 
   if (error) {
+    logger.error(`[AUTH][DELETE_USER_ERROR] Admin: ${requesterEmail} Target: ${emailToDelete} Error: ${error.message}`);
     ctx.status = 500;
     ctx.body = { message: 'Failed to mark user as deleted' };
   } else {
+    logger.info(`[AUTH][DELETE_USER_SUCCESS] Admin: ${requesterEmail} Target: ${emailToDelete}`);
     ctx.status = 200;
     ctx.body = { message: `User ${emailToDelete} marked as deleted` };
   }
 });
+
+// Admin: listare utilizatori
 authRouter.get('/admin/users', requireAuth, async (ctx) => {
   const requesterEmail = ctx.state.user.email;
+  logger.info(`[AUTH][USERS_LIST_ATTEMPT] Requester: ${requesterEmail}`);
 
   const { data: adminUser, error: adminError } = await supabase
       .from('users')
@@ -291,6 +314,7 @@ authRouter.get('/admin/users', requireAuth, async (ctx) => {
       .single();
 
   if (adminError || !adminUser || adminUser.role !== 'admin') {
+    logger.warn(`[AUTH][USERS_LIST_DENIED] Requester: ${requesterEmail} (Not admin)`);
     ctx.status = 403;
     ctx.body = { message: 'Access denied' };
     return;
@@ -301,11 +325,14 @@ authRouter.get('/admin/users', requireAuth, async (ctx) => {
       .select('email, username, role, is_deleted');
 
   if (error) {
+    logger.error(`[AUTH][USERS_LIST_ERROR] Requester: ${requesterEmail} Error: ${error.message}`);
     ctx.status = 500;
     ctx.body = { message: 'Failed to fetch users' };
   } else {
+    logger.info(`[AUTH][USERS_LIST_SUCCESS] Requester: ${requesterEmail} Count: ${users.length}`);
     ctx.status = 200;
     ctx.body = users;
   }
 });
+
 export default authRouter;

@@ -24,6 +24,7 @@
     "node-fetch": "^3.3.2",
     "nodemailer": "^6.10.0",
     "stripe": "^18.1.0",
+    "winston": "^3.17.0",
     "ws": "7.4.6"
   },
   "engines": {
